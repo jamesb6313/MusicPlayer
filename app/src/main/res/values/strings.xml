@@ -10,9 +10,15 @@
     <string name="saveDetails">Save</string>
     <string name="cancelDetails">Cancel</string>
 
-    <string name="permissions_please">Permission denied, boo!</string>
     <string name="song_title">Title</string>
     <string name="song_artist">Artist</string>
     <string name="song_image">Song Image</string>
+
+    <string name="request_permissions">Request Permissions</string>
+    <string name="permissions_please">Permission denied, boo!</string>
+
+    <string name="permission_required">Camera access is required to display the camera preview.</string>
+    <string name="ok">OK</string>
+    <string name="permission_granted">Permission is granted. You can use the camera now.</string>
 
 </resources>

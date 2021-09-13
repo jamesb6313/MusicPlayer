@@ -22,8 +22,6 @@ class MySongRecyclerViewAdapter : BaseRecyclerViewAdapter<AudioSongs>(){
         myHolder?.setUpView(song = getItem(position))
     }
 
-
-
     inner class MyViewHolder(mView: View) : RecyclerView.ViewHolder(mView),
         View.OnClickListener {
         private val mTitleTextView: TextView = mView.findViewById(R.id.title)
