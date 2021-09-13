@@ -2,11 +2,15 @@ package com.jb.musicplayer
 
 import android.Manifest
 import android.app.AlertDialog
+import android.content.ComponentName
 import android.content.DialogInterface
 import android.content.Intent
+import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.os.IBinder
+import android.os.PersistableBundle
 import android.provider.MediaStore
 import android.util.Log
 import android.view.Menu
@@ -27,6 +31,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var layout: View
     private lateinit var binding: ActivityMainBinding
     private val MY_PERMISSIONS_READ_STORAGE = 42
+
+    var serviceBound = false
 
     lateinit var mAdapter: MySongRecyclerViewAdapter
 
@@ -207,15 +213,16 @@ class MainActivity : AppCompatActivity() {
         }
         return super.onOptionsItemSelected(item)
     }
+
     //Service code
     /////////////////////////////////////////////////
 
     //Binding this Client to the AudioPlayer Service
-/*    private val serviceConnection: ServiceConnection = object : ServiceConnection {
+    private val serviceConnection: ServiceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, service: IBinder) {
             // We've bound to LocalService, cast the IBinder and get LocalService instance
-            val binder: MediaPlayerService.LocalBinder = service as MediaPlayerService.LocalBinder
-            player = binder.service
+//            val binder: MediaPlayerService.LocalBinder = service as MediaPlayerService.LocalBinder
+//            player = binder.service
             serviceBound = true
             Toast.makeText(this@MainActivity, "Service Bound", Toast.LENGTH_SHORT).show()
         }
@@ -223,5 +230,26 @@ class MainActivity : AppCompatActivity() {
         override fun onServiceDisconnected(name: ComponentName) {
             serviceBound = false
         }
-    }*/
+    }
+
+    override fun onSaveInstanceState(outState: Bundle, outPersistentState: PersistableBundle) {
+        super.onSaveInstanceState(outState, outPersistentState)
+        outState.putBoolean("serviceStatus", serviceBound)
+    }
+
+    override fun onRestoreInstanceState(savedInstanceState: Bundle) {
+        super.onRestoreInstanceState(savedInstanceState)
+        serviceBound = savedInstanceState.getBoolean("ServiceState")
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (serviceBound) {
+            Toast.makeText(this@MainActivity, "onDestroy() - Service is still bound", Toast.LENGTH_SHORT).show()
+            Log.i("Testing info","onDestroy() - Service is still bound")
+        } else {
+            Toast.makeText(this@MainActivity, "onDestroy() - Service not bound", Toast.LENGTH_SHORT).show()
+            Log.i("Testing info","onDestroy() - Service not bound")
+        }
+    }
 }
