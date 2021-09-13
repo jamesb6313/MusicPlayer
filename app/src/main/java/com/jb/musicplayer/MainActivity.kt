@@ -2,10 +2,7 @@ package com.jb.musicplayer
 
 import android.Manifest
 import android.app.AlertDialog
-import android.content.ComponentName
-import android.content.DialogInterface
-import android.content.Intent
-import android.content.ServiceConnection
+import android.content.*
 import android.content.pm.PackageManager
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
@@ -30,11 +27,14 @@ class MainActivity : AppCompatActivity() {
     var audioList: ArrayList<AudioSongs>? = null
     private lateinit var layout: View
     private lateinit var binding: ActivityMainBinding
+    lateinit var mAdapter: MySongRecyclerViewAdapter
     private val MY_PERMISSIONS_READ_STORAGE = 42
 
     var serviceBound = false
 
-    lateinit var mAdapter: MySongRecyclerViewAdapter
+    //private var player: MediaPlayerService? = null
+    var initialSongIndex = 0
+    val Broadcast_PLAY_NEW_AUDIO = "com.jb.musicplayer.PlayNewAudio"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -144,6 +144,45 @@ class MainActivity : AppCompatActivity() {
         cursor.close()
         return songCount
     }
+    /*
+    private fun playAudio(audioIndex: Int) {
+        try {
+            //Check is service is active
+            if (!serviceBound) {
+
+                initialSongIndex = audioIndex
+                Log.i("1 Song start index", "initialSongIndex = $initialSongIndex")
+                //end
+
+                //Store Serializable audioList to SharedPreferences
+                val storage = StorageUtil(applicationContext)
+                storage.storeAudio(audioList)
+                storage.storeAudioIndex(audioIndex)
+                val playerIntent = Intent(this, MediaPlayerService::class.java)
+                playerIntent.putExtra("StartIndex", initialSongIndex)
+                startService(playerIntent)
+                bindService(playerIntent, serviceConnection, Context.BIND_AUTO_CREATE)
+            } else {
+                Log.i("2 Song start index", "initialSongIndex = $initialSongIndex")
+
+                //Store the new audioIndex to SharedPreferences
+                val storage = StorageUtil(applicationContext)
+                storage.storeAudioIndex(audioIndex)
+
+                //Service is active
+                //Send a broadcast to the service -> PLAY_NEW_AUDIO
+                val broadcastIntent = Intent(Broadcast_PLAY_NEW_AUDIO)
+
+                sendBroadcast(broadcastIntent)
+            }
+        } catch (e: NullPointerException)
+        {
+            Log.e("Testing Error", "Main Activity PlayAudio Error = NullPointerException")
+            myShowErrorDlg("Error = " + e.message)
+        }
+
+        this.title = "Playing song " + (audioIndex + 1) + " of " + audioList?.size
+    }*/
 
     private fun myShowErrorDlg(errMsg: String) {
         // build alert dialog
