@@ -84,7 +84,7 @@ class MainActivity : AppCompatActivity() {
     private fun setUpAdapter() {
         mAdapter = MySongRecyclerViewAdapter()
 
-        audioList?.let { mAdapter.addItems(it) }    //todo need this to use BaseRecyclerAdapter see prj Locations
+        audioList?.let { mAdapter.addItems(it) }
         mAdapter.setOnItemClickListener(onItemClickListener = object : OnItemClickListener {
             override fun onItemClick(position: Int, view: View?) {
                 //mAdapter.getItem(position)
