@@ -32,7 +32,7 @@ class MainActivity : AppCompatActivity() {
 
     var serviceBound = false
 
-    //private var player: MediaPlayerService? = null
+    private var player: MediaPlayerService? = null
     var initialSongIndex = 0
     val Broadcast_PLAY_NEW_AUDIO = "com.jb.musicplayer.PlayNewAudio"
 
@@ -144,7 +144,7 @@ class MainActivity : AppCompatActivity() {
         cursor.close()
         return songCount
     }
-    /*
+
     private fun playAudio(audioIndex: Int) {
         try {
             //Check is service is active
@@ -182,7 +182,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         this.title = "Playing song " + (audioIndex + 1) + " of " + audioList?.size
-    }*/
+    }
 
     private fun myShowErrorDlg(errMsg: String) {
         // build alert dialog
@@ -229,7 +229,7 @@ class MainActivity : AppCompatActivity() {
         }
         if (id == R.id.action_shuffle) {
 
-/*            if (audioList != null && audioList!!.size > 1) {
+            if (audioList != null && audioList!!.size > 1) {
 
                 //todo - stop service before changing list order
                 if (serviceBound) {
@@ -247,7 +247,7 @@ class MainActivity : AppCompatActivity() {
                 audioList?.let { mAdapter.addItems(it) }
                 mAdapter.update()
 
-            }*/
+            }
             return true
         }
         return super.onOptionsItemSelected(item)
