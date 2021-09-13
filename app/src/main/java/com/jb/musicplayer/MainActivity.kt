@@ -3,21 +3,22 @@ package com.jb.musicplayer
 import android.Manifest
 import android.app.AlertDialog
 import android.content.DialogInterface
+import android.content.Intent
 import android.content.pm.PackageManager
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.provider.MediaStore
 import android.util.Log
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.PermissionChecker
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.snackbar.Snackbar
 import com.jb.musicplayer.databinding.ActivityMainBinding
 import java.util.ArrayList
 
@@ -28,17 +29,6 @@ class MainActivity : AppCompatActivity() {
     private val MY_PERMISSIONS_READ_STORAGE = 42
 
     lateinit var mAdapter: MySongRecyclerViewAdapter
-
-    private val requestPermissionLauncher =
-        registerForActivityResult(
-            ActivityResultContracts.RequestPermission()
-        ) { isGranted: Boolean ->
-            if (isGranted) {
-                Log.i("Permission: ", "Granted")
-            } else {
-                Log.i("Permission: ", "Denied")
-            }
-        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -173,4 +163,65 @@ class MainActivity : AppCompatActivity() {
         // show alert dialog
         alert.show()
     }
+
+    //menu
+    ///////////////////////////////////////////////////////////
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        menuInflater.inflate(R.menu.menu_main, menu)
+        return super.onCreateOptionsMenu(menu)
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        val id = item.itemId
+        if (id == R.id.action_settings) {
+            val intent = Intent(this@MainActivity, SettingsActivity::class.java)
+            startActivity(intent)
+            return true
+        }
+        if (id == R.id.action_shuffle) {
+
+/*            if (audioList != null && audioList!!.size > 1) {
+
+                //todo - stop service before changing list order
+                if (serviceBound) {
+                    unbindService(serviceConnection)
+                    serviceBound = false
+                    //service is active
+                    player!!.stopSelf()
+                }
+
+                //Collections.shuffle(audioList)
+                audioList!!.shuffle()
+
+                // update RecyclerView
+                mAdapter.clear()
+                audioList?.let { mAdapter.addItems(it) }
+                mAdapter.update()
+
+            }*/
+            return true
+        }
+        return super.onOptionsItemSelected(item)
+    }
+    //Service code
+    /////////////////////////////////////////////////
+
+    //Binding this Client to the AudioPlayer Service
+/*    private val serviceConnection: ServiceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName, service: IBinder) {
+            // We've bound to LocalService, cast the IBinder and get LocalService instance
+            val binder: MediaPlayerService.LocalBinder = service as MediaPlayerService.LocalBinder
+            player = binder.service
+            serviceBound = true
+            Toast.makeText(this@MainActivity, "Service Bound", Toast.LENGTH_SHORT).show()
+        }
+
+        override fun onServiceDisconnected(name: ComponentName) {
+            serviceBound = false
+        }
+    }*/
 }
