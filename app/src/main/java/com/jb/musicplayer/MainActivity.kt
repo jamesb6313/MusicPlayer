@@ -87,7 +87,7 @@ class MainActivity : AppCompatActivity() {
 
                 //Toast.makeText(this@MainActivity,"Play songs", Toast.LENGTH_LONG).show()
                 Log.i("Testing info", "SetUpAdapter() - current position is $position")
-                //playAudio(position)
+                playAudio(position)
             }
         })
     }
@@ -126,6 +126,12 @@ class MainActivity : AppCompatActivity() {
         if (cursor != null && cursor.count > 0) {
             //audioList = ArrayList<AudioSongs>()
             while (cursor.moveToNext()) {
+                val data =
+                    cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.DATA))
+                val displayName =
+                    cursor.getString(cursor.getColumnIndex((MediaStore.Audio.Media.DISPLAY_NAME)))
+                val RelPath =
+                    cursor.getString(cursor.getColumnIndex((MediaStore.Audio.Media.RELATIVE_PATH)))
                 val title =
                     cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.TITLE))
                 val album =
@@ -134,8 +140,11 @@ class MainActivity : AppCompatActivity() {
                     cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ARTIST))
 
 
+// data = /storage/emulated/0/Music/LinkinPark2.mp3
+                // displayName = /LinkinPark2.mps
+                // RelPath = Music/
                 // Save to audioList
-                audioList!!.add(AudioSongs(title, album, artist))
+                audioList!!.add(AudioSongs(data, title, album, artist))
             }
             //Collections.shuffle(audioList)
             audioList!!.shuffle()
@@ -260,8 +269,8 @@ class MainActivity : AppCompatActivity() {
     private val serviceConnection: ServiceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, service: IBinder) {
             // We've bound to LocalService, cast the IBinder and get LocalService instance
-//            val binder: MediaPlayerService.LocalBinder = service as MediaPlayerService.LocalBinder
-//            player = binder.service
+            val binder: MediaPlayerService.LocalBinder = service as MediaPlayerService.LocalBinder
+            player = binder.service
             serviceBound = true
             Toast.makeText(this@MainActivity, "Service Bound", Toast.LENGTH_SHORT).show()
         }

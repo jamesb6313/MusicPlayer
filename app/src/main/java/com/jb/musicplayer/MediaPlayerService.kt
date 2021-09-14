@@ -121,10 +121,8 @@ class MediaPlayerService : Service(), OnCompletionListener,
     @Throws(RemoteException::class)
     private fun initMediaSession() {
         if (mediaSessionManager != null) return  //mediaSessionManager exists
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            mediaSessionManager =
-                getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
-        }
+        mediaSessionManager =
+            getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
         // Create a new MediaSession
         mediaSession = MediaSessionCompat(applicationContext, "AudioPlayer")
         //Get MediaSessions transport controls
@@ -397,14 +395,16 @@ class MediaPlayerService : Service(), OnCompletionListener,
         )
 
 
-/*        try {
+        try {
             // Set the data source to the mediaFile location
             //mediaPlayer.setDataSource(mediaFile);
+                //Uri uri=MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
+
             mediaPlayer!!.setDataSource(activeAudio?.data)
         } catch (e: IOException) {
             e.printStackTrace()
             stopSelf()
-        }*/
+        }
         mediaPlayer!!.prepareAsync()
 
         //Added to allow next song to play after last song finishes
