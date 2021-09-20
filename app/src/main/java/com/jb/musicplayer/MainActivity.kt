@@ -52,11 +52,6 @@ class MainActivity : AppCompatActivity() {
     private fun checkAndRequestPermissions(): Boolean {
         val listPermissionsNeeded: MutableList<String> = ArrayList()
 
-        val permissionReadStorage = ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.READ_EXTERNAL_STORAGE
-        )
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {  //API = 29
             val permissionMedia = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_MEDIA_LOCATION)
             if (permissionMedia != PackageManager.PERMISSION_GRANTED) {
@@ -64,8 +59,20 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        val permissionReadStorage = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        )
         if (permissionReadStorage != PackageManager.PERMISSION_GRANTED) {
             listPermissionsNeeded.add(Manifest.permission.READ_EXTERNAL_STORAGE)
+        }
+
+        val permissionForegroundService = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.FOREGROUND_SERVICE
+        )
+        if (permissionForegroundService != PackageManager.PERMISSION_GRANTED) {
+            listPermissionsNeeded.add(Manifest.permission.FOREGROUND_SERVICE)
         }
 
         if (listPermissionsNeeded.isNotEmpty()) {
@@ -208,8 +215,7 @@ class MainActivity : AppCompatActivity() {
                 val playerIntent = Intent(this, MediaPlayerService::class.java)
                 //playerIntent.putExtra("StartIndex", initialSongIndex)
 
-                ContextCompat.startForegroundService(applicationContext, playerIntent)
-
+                ContextCompat.startForegroundService(this, playerIntent)
                 //startService(playerIntent)
                 bindService(playerIntent, serviceConnection, Context.BIND_AUTO_CREATE)
             } else {
@@ -268,116 +274,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun exit() {
-        stopService(Intent(this, MediaPlayerService::class.java))
-
         if (serviceBound) {
             unbindService(serviceConnection)
+            serviceBound = false
+
             //service is active
             player!!.stopSelf()
+            Toast.makeText(this@MainActivity, "exit() - Service not bound", Toast.LENGTH_SHORT).show()
         }
 
+        stopService(Intent(this, MediaPlayerService::class.java))
         finish()
     }
-/*
-
-    //See: https://stackoverflow.com/questions/9949726/persistent-service-icon-in-notification-bar/29569884
-    private fun buildPlayerNotification(playerIntent: Intent): Notification {
-
-        val channelId = "my_channel_id_02"
-        val notificationManager =
-            this.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        lateinit var notificationCompatBuilder: NotificationCompat.Builder
-        var notificationAction = android.R.drawable.ic_notification_clear_all
-
-        val contentIntent = PendingIntent.getActivity(
-            applicationContext,
-            0,
-            playerIntent,  // add this
-            PendingIntent.FLAG_UPDATE_CURRENT
-        )
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val notificationChannel = NotificationChannel(
-                channelId,
-                "Player Notification",
-                NotificationManager.IMPORTANCE_LOW
-            )
-
-            // Configure the notification channel.
-            notificationChannel.description = "Channel for player"
-            notificationChannel.enableLights(true)
-            notificationChannel.lightColor = Color.GREEN
-            notificationChannel.enableVibration(false)
-            notificationManager.createNotificationChannel(notificationChannel)
-
-            //setDeleteIntent()
-
-            // Create a new Notification
-            notificationCompatBuilder =
-                NotificationCompat.Builder(this, channelId)
-                    // Set the large and small icons
-                    //.setLargeIcon(largeIcon)
-                    .setColor(ContextCompat.getColor(applicationContext, R.color.design_default_color_primary_dark))
-                    .setSmallIcon(R.drawable.ic_stat_music)
-                    // Set Notification content information
-                    .setContentText("Playing Song List")
-                    .setContentTitle("Music Player")
-                    .setContentIntent(contentIntent)
-                    .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                    .setStyle(
-                        androidx.media.app.NotificationCompat.MediaStyle()
-                            .setShowActionsInCompactView(0)
-                            .setShowCancelButton(true)
-                            .setCancelButtonIntent(MediaButtonReceiver.buildMediaButtonPendingIntent(
-                                applicationContext,
-                                PlaybackStateCompat.ACTION_STOP
-                            ))
-                    )
-        } else {
-            // Create a new Notification
-            notificationCompatBuilder =
-                NotificationCompat.Builder(this)
-                    //.setShowWhen(false) // Set the Notification style
-                    .setStyle(
-                        androidx.media.app.NotificationCompat.MediaStyle()
-                            .setShowActionsInCompactView(0)
-                            .setShowCancelButton(true)
-                            .setCancelButtonIntent(MediaButtonReceiver.buildMediaButtonPendingIntent(
-                                applicationContext,
-                                PlaybackStateCompat.ACTION_STOP
-                            ))
-                    )
-                    // Set the large and small icons
-                    //.setLargeIcon(largeIcon)
-                    .setColor(ContextCompat.getColor(applicationContext, R.color.design_default_color_primary_dark))
-                    .setSmallIcon(R.drawable.ic_stat_music)
-                    // Set Notification content information
-                    .setContentText("Playing Song List")
-                    .setContentTitle("Music Player")
-                    .setContentIntent(contentIntent)
-                    .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-        }
-
-        return notificationCompatBuilder.build()
-
-*/
-/*        (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).notify(
-            MediaPlayerService.PLAYER_NOTIFICATION_ID,
-            notificationCompatBuilder.build()
-        )*//*
-
-
-    }
-
-*/
-/*    private fun removeNotification() {
-        val notificationManager =
-            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.cancel(MediaPlayerService.PLAYER_NOTIFICATION_ID)
-    }*//*
-
-
-*/
 
     //menu
     ///////////////////////////////////////////////////////////

@@ -675,21 +675,6 @@ class MediaPlayerService : Service(), OnCompletionListener,
         registerBecomingNoisyReceiver()
         //Listen for new Audio to play -- BroadcastReceiver
         registerPlayNewAudio()
-
-/*        val notificationIntent = Intent(this, MainActivity::class.java)
-
-        val pendingIntent = PendingIntent.getActivity(
-            this, 0,
-            notificationIntent, 0
-        )
-
-        val notification: Notification = NotificationCompat.Builder(this)
-            .setSmallIcon(R.drawable.ic_stat_music)
-            .setContentTitle("My Awesome App")
-            .setContentText("Doing some work...")
-            .setContentIntent(pendingIntent).build()
-
-        startForeground(1337, notification)*/
     }
 
     private fun buildNotification(playbackStatus: PlaybackStatus) {
@@ -755,7 +740,7 @@ class MediaPlayerService : Service(), OnCompletionListener,
                     )
                     // Set the large and small icons
                     .setLargeIcon(largeIcon)
-                    .setSmallIcon(R.drawable.ic_launcher_foreground)
+                    .setSmallIcon(R.drawable.ic_stat_music)
                     // Set Notification content information
                     .setContentText(activeAudio?.artist)
                     //.setContentTitle(activeAudio?.album)
@@ -783,7 +768,7 @@ class MediaPlayerService : Service(), OnCompletionListener,
                     )
                     // Set the large and small icons
                     .setLargeIcon(largeIcon)
-                    .setSmallIcon(R.drawable.ic_launcher_foreground)
+                    .setSmallIcon(R.drawable.ic_stat_music)
                     // Set Notification content information
                     .setContentText(activeAudio?.artist)
                     //.setContentTitle(activeAudio?.album)
