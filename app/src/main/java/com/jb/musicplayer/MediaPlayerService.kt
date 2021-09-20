@@ -1,21 +1,15 @@
 package com.jb.musicplayer
 
 
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
-import android.app.Service
+import android.app.*
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.BitmapFactory
 import android.graphics.Color
-import android.media.AudioAttributes
-import android.media.AudioFocusRequest
-import android.media.AudioManager
+import android.media.*
 import android.media.AudioManager.OnAudioFocusChangeListener
-import android.media.MediaPlayer
 import android.media.MediaPlayer.*
 import android.media.session.MediaSessionManager
 import android.os.Binder
@@ -34,6 +28,17 @@ import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import java.io.IOException
 import java.util.*
+import android.app.PendingIntent
+import android.net.Uri
+import android.provider.MediaStore
+import java.io.File
+import java.io.FileInputStream
+import android.app.NotificationManager
+
+import android.app.NotificationChannel
+import android.support.v4.media.session.PlaybackStateCompat
+import androidx.media.session.MediaButtonReceiver
+
 
 class MediaPlayerService : Service(), OnCompletionListener,
     OnPreparedListener, OnErrorListener, OnSeekCompleteListener,
@@ -59,11 +64,6 @@ class MediaPlayerService : Service(), OnCompletionListener,
     private var mediaSessionManager: MediaSessionManager? = null
     private var mediaSession: MediaSessionCompat? = null
     private var transportControls: MediaControllerCompat.TransportControls? = null
-
-    //newcode - Oct 2020 *****
-    private var startIndex = 0
-    var mMainActivity: MainActivity = MainActivity() //newcode - end
-
 
     //
     //https://www.geeksforgeeks.org/how-to-manage-audio-focus-in-android/
@@ -266,8 +266,6 @@ class MediaPlayerService : Service(), OnCompletionListener,
         )
     }
 
-//newcode
-
     private fun restartCurrent() {
 
         //Update stored index
@@ -277,7 +275,6 @@ class MediaPlayerService : Service(), OnCompletionListener,
         mediaPlayer!!.reset()
         initMediaPlayer()
     }
-//newcode - end
 
     private fun skipToNext() {
         if (audioIndex == audioList!!.size - 1) {
@@ -398,11 +395,21 @@ class MediaPlayerService : Service(), OnCompletionListener,
         try {
             // Set the data source to the mediaFile location
             //mediaPlayer.setDataSource(mediaFile);
-                //Uri uri=MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
+            //var uri: Uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+            //mediaPlayer!!.setDataSource(this, Uri.parse(activeAudio?.data))
 
-            mediaPlayer!!.setDataSource(activeAudio?.data)
+            //mediaPlayer!!.setDataSource(activeAudio?.data)
+
+            val filePath = activeAudio?.data
+            val file = File(filePath!!)
+            val inputStream = FileInputStream(file)
+            mediaPlayer!!.setDataSource(inputStream.fd)
+            inputStream.close()
+
         } catch (e: IOException) {
+            Log.e("Info", "Error in setDataSource - error message = " + e.message)
             e.printStackTrace()
+
             stopSelf()
         }
         mediaPlayer!!.prepareAsync()
@@ -420,11 +427,6 @@ class MediaPlayerService : Service(), OnCompletionListener,
 
             //skipToNext()          // original code to just play next song
         }
-
-        //newcode - Oct 2020 *****
-        mMainActivity.title = "Playing song " + (audioIndex + 1) + " of " + audioList?.size
-        Log.i("Song Count - 371", "audioIndex = $audioIndex, initialSongIndex = $startIndex")
-        //newcode - end
     }
 
     private fun playMedia() {
@@ -466,9 +468,6 @@ class MediaPlayerService : Service(), OnCompletionListener,
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
         try {
-            //newcode Nov 2020 *****
-            startIndex =  intent.getIntExtra("StartIndex", 0)   //end
-
             //Load data from SharedPreferences
             val storage = StorageUtil(applicationContext)
             audioList = storage.loadAudio()
@@ -513,9 +512,7 @@ class MediaPlayerService : Service(), OnCompletionListener,
 //        }
         if (mediaSessionManager == null) {
             try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    initMediaSession()
-                }
+                initMediaSession()
                 initMediaPlayer()
             } catch (e: RemoteException) {
                 e.printStackTrace()
@@ -603,7 +600,7 @@ class MediaPlayerService : Service(), OnCompletionListener,
         }
     }
 
-    private fun register_playNewAudio() {
+    private fun registerPlayNewAudio() {
         //Register playNewMedia receiver
         //val filter = IntentFilter(MainActivity.Broadcast_PLAY_NEW_AUDIO)
         //todo - get rid of hard code
@@ -614,14 +611,59 @@ class MediaPlayerService : Service(), OnCompletionListener,
     override fun onCreate() {
         super.onCreate()
 
+        val pendingCloseIntent = PendingIntent.getActivity(
+            this, 0,
+            Intent(this, MainActivity::class.java)
+                .setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                .setAction(CLOSE_ACTION),
+            0
+        )
 
 
-//        mFocusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
-//            .setAudioAttributes(mPlaybackAttributes!!)
-//            .setAcceptsDelayedFocusGain(true)
-//            .setOnAudioFocusChangeListener(mAudioFocusChangeListener!!)
-//            .build()
+        if (Build.VERSION.SDK_INT >= 26) {
+            val CHANNEL_ID = "my_channel_01"
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "MusicPlayer stop music and app",
+                NotificationManager.IMPORTANCE_LOW      // API = 26 this channel contains no sound
+            )
+            (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(
+                channel
+            )
+            val notification = NotificationCompat.Builder(this, CHANNEL_ID)
 
+/*                .setStyle(
+                    androidx.media.app.NotificationCompat.MediaStyle()
+                        .setShowActionsInCompactView(0)
+                        .setShowCancelButton(true)
+                        .setCancelButtonIntent(
+                            MediaButtonReceiver.buildMediaButtonPendingIntent(
+                            this,
+                            PlaybackStateCompat.ACTION_STOP
+                            ))
+                )
+                .setDeleteIntent(
+                    MediaButtonReceiver.buildMediaButtonPendingIntent(
+                        this,
+                        PlaybackStateCompat.ACTION_STOP
+                        )
+                )*/
+                // Add a pause button
+                .addAction(
+                    android.R.drawable.ic_menu_close_clear_cancel,
+                    "Exit App & Service", pendingCloseIntent)
+
+                .setSmallIcon(R.drawable.ic_stat_music)
+                .setCategory(NotificationCompat.CATEGORY_SERVICE)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setContentTitle("Music Player App")
+                .setShowWhen(true)
+                .setWhen(System.currentTimeMillis())
+                .setContentText("Songs currently playing")
+                .setOngoing(true)
+                .build()
+            startForeground(PLAYER_NOTIFICATION_ID, notification)
+        }
 
         // Perform one-time setup procedures
 
@@ -632,7 +674,22 @@ class MediaPlayerService : Service(), OnCompletionListener,
         //ACTION_AUDIO_BECOMING_NOISY -- change in audio outputs -- BroadcastReceiver
         registerBecomingNoisyReceiver()
         //Listen for new Audio to play -- BroadcastReceiver
-        register_playNewAudio()
+        registerPlayNewAudio()
+
+/*        val notificationIntent = Intent(this, MainActivity::class.java)
+
+        val pendingIntent = PendingIntent.getActivity(
+            this, 0,
+            notificationIntent, 0
+        )
+
+        val notification: Notification = NotificationCompat.Builder(this)
+            .setSmallIcon(R.drawable.ic_stat_music)
+            .setContentTitle("My Awesome App")
+            .setContentText("Doing some work...")
+            .setContentIntent(pendingIntent).build()
+
+        startForeground(1337, notification)*/
     }
 
     private fun buildNotification(playbackStatus: PlaybackStatus) {
@@ -664,68 +721,89 @@ class MediaPlayerService : Service(), OnCompletionListener,
 
 //https://stackoverflow.com/questions/45462666/notificationcompat-builder-deprecated-in-android-o
 //8 - Simple Sample
-        val NOTIFICATION_CHANNEL_ID = "my_channel_id_01"
+        val channelId = "my_channel_id_01"
         val notificationManager =
             this.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        lateinit var notificationCompatBuilder: NotificationCompat.Builder
 
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val notificationChannel = NotificationChannel(
-                NOTIFICATION_CHANNEL_ID,
+                channelId,
                 "My Notifications",
-                //NotificationManager.IMPORTANCE_DEFAULT
-                NotificationManager.IMPORTANCE_LOW      //https://code.tutsplus.com/tutorials/android-o-how-to-use-notification-channels--cms-28616
+                NotificationManager.IMPORTANCE_LOW
             )
 
             // Configure the notification channel.
             notificationChannel.description = "Channel description"
             notificationChannel.enableLights(true)
-            notificationChannel.lightColor = Color.RED
+            notificationChannel.lightColor = Color.GREEN
             //notificationChannel.vibrationPattern = longArrayOf(0, 1000, 500, 1000)
             notificationChannel.enableVibration(false)
             notificationManager.createNotificationChannel(notificationChannel)
+
+            // Create a new Notification
+            notificationCompatBuilder =
+                NotificationCompat.Builder(this, channelId)
+                    .setShowWhen(false) // Set the Notification style
+                    .setStyle(
+                        androidx.media.app.NotificationCompat.MediaStyle()
+                            // Attach our MediaSession token
+                            .setMediaSession(mediaSession!!.sessionToken)
+                            // Show our playback controls in the compact notification view.
+                            .setShowActionsInCompactView(0, 1, 2)
+                    )
+                    // Set the large and small icons
+                    .setLargeIcon(largeIcon)
+                    .setSmallIcon(R.drawable.ic_launcher_foreground)
+                    // Set Notification content information
+                    .setContentText(activeAudio?.artist)
+                    //.setContentTitle(activeAudio?.album)
+                    //.setContentInfo(activeAudio?.title) // Add playback actions
+                    .setContentTitle(activeAudio?.title)
+                    .setContentInfo(activeAudio?.album) // Add playback actions
+                    .addAction(android.R.drawable.ic_media_previous, "previous", playbackAction(3))
+                    .addAction(notificationAction, "pause", playPauseAction)
+                    .addAction(
+                        android.R.drawable.ic_media_next,
+                        "next",
+                        playbackAction(2)
+                    )
+        } else {
+            // Create a new Notification
+            notificationCompatBuilder =
+                NotificationCompat.Builder(this)
+                    .setShowWhen(false) // Set the Notification style
+                    .setStyle(
+                        androidx.media.app.NotificationCompat.MediaStyle()
+                            // Attach our MediaSession token
+                            .setMediaSession(mediaSession!!.sessionToken)
+                            // Show our playback controls in the compact notification view.
+                            .setShowActionsInCompactView(0, 1, 2)
+                    )
+                    // Set the large and small icons
+                    .setLargeIcon(largeIcon)
+                    .setSmallIcon(R.drawable.ic_launcher_foreground)
+                    // Set Notification content information
+                    .setContentText(activeAudio?.artist)
+                    //.setContentTitle(activeAudio?.album)
+                    //.setContentInfo(activeAudio?.title) // Add playback actions
+                    .setContentTitle(activeAudio?.title)
+                    .setContentInfo(activeAudio?.album) // Add playback actions
+                    .addAction(android.R.drawable.ic_media_previous, "previous", playbackAction(3))
+                    .addAction(notificationAction, "pause", playPauseAction)
+                    .addAction(
+                        android.R.drawable.ic_media_next,
+                        "next",
+                        playbackAction(2)
+                    )
         }
 
-//
-
-        // Create a new Notification
-        //newcode Nov 2020 ******
-        val songCount = (audioIndex - startIndex) + 1
-        mMainActivity.title = "Playing song " + (audioIndex + 1) + " of " + audioList?.size
-        Log.i("Song Count - 635", "audioIndex = $audioIndex, initialSongIndex = $startIndex")
-        //newcode - end
-        val notificationBuilder =
-            NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)   //todo - this is good for >= Build.VERSION_CODES.O
-                .setShowWhen(false) // Set the Notification style
-                .setStyle(
-                    androidx.media.app.NotificationCompat.MediaStyle()
-                        // Attach our MediaSession token
-                        .setMediaSession(mediaSession!!.sessionToken)
-                        // Show our playback controls in the compact notification view.
-                        .setShowActionsInCompactView(0, 1, 2)
-                )
-                // Set the Notification color
-                .setColor(Color.RED)
-                // Set the large and small icons
-                .setLargeIcon(largeIcon)
-                .setSmallIcon(android.R.drawable.stat_sys_headset)
-                // Set Notification content information
-                .setContentText("$songCount - " + activeAudio?.artist) //newcode Nov 2020 *****
-                //.setContentTitle(activeAudio?.album)
-                //.setContentInfo(activeAudio?.title) // Add playback actions
-                .setContentTitle(activeAudio?.title)
-                .setContentInfo(activeAudio?.album) // Add playback actions
-                .addAction(android.R.drawable.ic_media_previous, "previous", playbackAction(3))
-                .addAction(notificationAction, "pause", playPauseAction)
-                .addAction(
-                    android.R.drawable.ic_media_next,
-                    "next",
-                    playbackAction(2)
-                )
         (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).notify(
             NOTIFICATION_ID,
-            notificationBuilder.build()
+            notificationCompatBuilder.build()
         )
+
     }
 
     private fun removeNotification() {
@@ -848,5 +926,8 @@ class MediaPlayerService : Service(), OnCompletionListener,
 
         //AudioPlayer notification ID
         private const val NOTIFICATION_ID = 101
+
+        const val PLAYER_NOTIFICATION_ID = 102
+        const val CLOSE_ACTION: String = "close"
     }
 }

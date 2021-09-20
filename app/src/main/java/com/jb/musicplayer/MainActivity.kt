@@ -1,10 +1,10 @@
 package com.jb.musicplayer
 
 import android.Manifest
-import android.app.AlertDialog
+import android.app.*
 import android.content.*
 import android.content.pm.PackageManager
-import androidx.appcompat.app.AppCompatActivity
+import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import android.os.PersistableBundle
@@ -14,21 +14,22 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.core.content.PermissionChecker
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.jb.musicplayer.databinding.ActivityMainBinding
-import java.util.ArrayList
+import java.util.*
+
 
 class MainActivity : AppCompatActivity() {
     var audioList: ArrayList<AudioSongs>? = null
     private lateinit var layout: View
     private lateinit var binding: ActivityMainBinding
     lateinit var mAdapter: MySongRecyclerViewAdapter
-    private val MY_PERMISSIONS_READ_STORAGE = 42
+    private val REQUEST_ID_MULTIPLE_PERMISSIONS = 42
 
     var serviceBound = false
 
@@ -44,31 +45,64 @@ class MainActivity : AppCompatActivity() {
         setContentView(view)
 
         audioList = ArrayList<AudioSongs>()
-        askForPermissions()
+        if (checkAndRequestPermissions())
+            initializeView()
     }
 
+    private fun checkAndRequestPermissions(): Boolean {
+        val listPermissionsNeeded: MutableList<String> = ArrayList()
 
-    private fun askForPermissions() {
-        @PermissionChecker.PermissionResult val permissionCheck = ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
-        if (permissionCheck != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
-                MY_PERMISSIONS_READ_STORAGE)
-        } else {
-            initializeView()
+        val permissionReadStorage = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        )
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {  //API = 29
+            val permissionMedia = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_MEDIA_LOCATION)
+            if (permissionMedia != PackageManager.PERMISSION_GRANTED) {
+                listPermissionsNeeded.add(Manifest.permission.ACCESS_MEDIA_LOCATION)
+            }
         }
+
+        if (permissionReadStorage != PackageManager.PERMISSION_GRANTED) {
+            listPermissionsNeeded.add(Manifest.permission.READ_EXTERNAL_STORAGE)
+        }
+
+        if (listPermissionsNeeded.isNotEmpty()) {
+            ActivityCompat.requestPermissions(
+                this,
+                listPermissionsNeeded.toTypedArray(),
+                REQUEST_ID_MULTIPLE_PERMISSIONS
+            )
+            return false
+        }
+        return true
     }
 
     override fun onRequestPermissionsResult(requestCode: Int,
                                             permissions: Array<out String>,
                                             grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == MY_PERMISSIONS_READ_STORAGE) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                initializeView()
-            } else {
-                Toast.makeText(this@MainActivity, R.string.permissions_please, Toast.LENGTH_SHORT).show()
-            }
+
+        when(requestCode) {
+            REQUEST_ID_MULTIPLE_PERMISSIONS ->
+                if (grantResults.isNotEmpty()) {
+                    var permissionDenied = ""
+                    for (per in permissions) {
+                        if (grantResults[0] == PackageManager.PERMISSION_DENIED) {
+                            permissionDenied += per.trimIndent()
+                            permissionDenied += " - "
+                        }
+
+                    }
+                    Toast.makeText(
+                        this@MainActivity,
+                        permissionDenied,
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
         }
+
     }
 
     fun initializeView() {
@@ -128,10 +162,14 @@ class MainActivity : AppCompatActivity() {
             while (cursor.moveToNext()) {
                 val data =
                     cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.DATA))
-                val displayName =
+/*                val displayName =
                     cursor.getString(cursor.getColumnIndex((MediaStore.Audio.Media.DISPLAY_NAME)))
                 val RelPath =
-                    cursor.getString(cursor.getColumnIndex((MediaStore.Audio.Media.RELATIVE_PATH)))
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        cursor.getString(cursor.getColumnIndex((MediaStore.Audio.Media.RELATIVE_PATH)))
+                    } else {
+                        TODO("VERSION.SDK_INT < Q")
+                    }*/
                 val title =
                     cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.TITLE))
                 val album =
@@ -168,8 +206,11 @@ class MainActivity : AppCompatActivity() {
                 storage.storeAudio(audioList)
                 storage.storeAudioIndex(audioIndex)
                 val playerIntent = Intent(this, MediaPlayerService::class.java)
-                playerIntent.putExtra("StartIndex", initialSongIndex)
-                startService(playerIntent)
+                //playerIntent.putExtra("StartIndex", initialSongIndex)
+
+                ContextCompat.startForegroundService(applicationContext, playerIntent)
+
+                //startService(playerIntent)
                 bindService(playerIntent, serviceConnection, Context.BIND_AUTO_CREATE)
             } else {
                 Log.i("2 Song start index", "initialSongIndex = $initialSongIndex")
@@ -217,6 +258,126 @@ class MainActivity : AppCompatActivity() {
         // show alert dialog
         alert.show()
     }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        val action = intent.action ?: return
+        when (action) {
+            MediaPlayerService.CLOSE_ACTION -> exit()
+        }
+    }
+
+    private fun exit() {
+        stopService(Intent(this, MediaPlayerService::class.java))
+
+        if (serviceBound) {
+            unbindService(serviceConnection)
+            //service is active
+            player!!.stopSelf()
+        }
+
+        finish()
+    }
+/*
+
+    //See: https://stackoverflow.com/questions/9949726/persistent-service-icon-in-notification-bar/29569884
+    private fun buildPlayerNotification(playerIntent: Intent): Notification {
+
+        val channelId = "my_channel_id_02"
+        val notificationManager =
+            this.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        lateinit var notificationCompatBuilder: NotificationCompat.Builder
+        var notificationAction = android.R.drawable.ic_notification_clear_all
+
+        val contentIntent = PendingIntent.getActivity(
+            applicationContext,
+            0,
+            playerIntent,  // add this
+            PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val notificationChannel = NotificationChannel(
+                channelId,
+                "Player Notification",
+                NotificationManager.IMPORTANCE_LOW
+            )
+
+            // Configure the notification channel.
+            notificationChannel.description = "Channel for player"
+            notificationChannel.enableLights(true)
+            notificationChannel.lightColor = Color.GREEN
+            notificationChannel.enableVibration(false)
+            notificationManager.createNotificationChannel(notificationChannel)
+
+            //setDeleteIntent()
+
+            // Create a new Notification
+            notificationCompatBuilder =
+                NotificationCompat.Builder(this, channelId)
+                    // Set the large and small icons
+                    //.setLargeIcon(largeIcon)
+                    .setColor(ContextCompat.getColor(applicationContext, R.color.design_default_color_primary_dark))
+                    .setSmallIcon(R.drawable.ic_stat_music)
+                    // Set Notification content information
+                    .setContentText("Playing Song List")
+                    .setContentTitle("Music Player")
+                    .setContentIntent(contentIntent)
+                    .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                    .setStyle(
+                        androidx.media.app.NotificationCompat.MediaStyle()
+                            .setShowActionsInCompactView(0)
+                            .setShowCancelButton(true)
+                            .setCancelButtonIntent(MediaButtonReceiver.buildMediaButtonPendingIntent(
+                                applicationContext,
+                                PlaybackStateCompat.ACTION_STOP
+                            ))
+                    )
+        } else {
+            // Create a new Notification
+            notificationCompatBuilder =
+                NotificationCompat.Builder(this)
+                    //.setShowWhen(false) // Set the Notification style
+                    .setStyle(
+                        androidx.media.app.NotificationCompat.MediaStyle()
+                            .setShowActionsInCompactView(0)
+                            .setShowCancelButton(true)
+                            .setCancelButtonIntent(MediaButtonReceiver.buildMediaButtonPendingIntent(
+                                applicationContext,
+                                PlaybackStateCompat.ACTION_STOP
+                            ))
+                    )
+                    // Set the large and small icons
+                    //.setLargeIcon(largeIcon)
+                    .setColor(ContextCompat.getColor(applicationContext, R.color.design_default_color_primary_dark))
+                    .setSmallIcon(R.drawable.ic_stat_music)
+                    // Set Notification content information
+                    .setContentText("Playing Song List")
+                    .setContentTitle("Music Player")
+                    .setContentIntent(contentIntent)
+                    .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+        }
+
+        return notificationCompatBuilder.build()
+
+*/
+/*        (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).notify(
+            MediaPlayerService.PLAYER_NOTIFICATION_ID,
+            notificationCompatBuilder.build()
+        )*//*
+
+
+    }
+
+*/
+/*    private fun removeNotification() {
+        val notificationManager =
+            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.cancel(MediaPlayerService.PLAYER_NOTIFICATION_ID)
+    }*//*
+
+
+*/
 
     //menu
     ///////////////////////////////////////////////////////////
@@ -299,5 +460,12 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this@MainActivity, "onDestroy() - Service not bound", Toast.LENGTH_SHORT).show()
             Log.i("Testing info","onDestroy() - Service not bound")
         }
+
+
+//        if (serviceBound) {
+//            unbindService(serviceConnection)
+//            //service is active
+//            player!!.stopSelf()
+//        }
     }
 }
