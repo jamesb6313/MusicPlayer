@@ -14,6 +14,7 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -45,71 +46,139 @@ class MainActivity : AppCompatActivity() {
         setContentView(view)
 
         audioList = ArrayList<AudioSongs>()
-        if (checkAndRequestPermissions())
-            initializeView()
+        initializeViewWrapper()
+
     }
 
-    private fun checkAndRequestPermissions(): Boolean {
-        val listPermissionsNeeded: MutableList<String> = ArrayList()
+//SEE: https://inthecheesefactory.com/blog/things-you-need-to-know-about-android-m-permission-developer-edition/en
+    private fun initializeViewWrapper() {
+        val permissionsNeeded: MutableList<String> = ArrayList()
+        val permissionsList: MutableList<String> = ArrayList()
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {  //API = 29
-            val permissionMedia = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_MEDIA_LOCATION)
-            if (permissionMedia != PackageManager.PERMISSION_GRANTED) {
-                listPermissionsNeeded.add(Manifest.permission.ACCESS_MEDIA_LOCATION)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            if (!addPermission(permissionsList, Manifest.permission.FOREGROUND_SERVICE))
+                permissionsNeeded.add("Foreground Service")
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {  //API = 29
+                if (!addPermission(permissionsList, Manifest.permission.ACCESS_MEDIA_LOCATION))
+                    permissionsNeeded.add("Media Access")
+            } else {
+                TODO("VERSION.SDK_INT < Q")
             }
+
+        } else {
+            TODO("VERSION.SDK_INT < P")
         }
 
-        val permissionReadStorage = ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.READ_EXTERNAL_STORAGE
-        )
-        if (permissionReadStorage != PackageManager.PERMISSION_GRANTED) {
-            listPermissionsNeeded.add(Manifest.permission.READ_EXTERNAL_STORAGE)
-        }
+        if (!addPermission(permissionsList, Manifest.permission.READ_EXTERNAL_STORAGE))
+            permissionsNeeded.add("Read Storage")
 
-        val permissionForegroundService = ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.FOREGROUND_SERVICE
-        )
-        if (permissionForegroundService != PackageManager.PERMISSION_GRANTED) {
-            listPermissionsNeeded.add(Manifest.permission.FOREGROUND_SERVICE)
-        }
+        if (permissionsList.isNotEmpty()) {
+            if (permissionsNeeded.isNotEmpty()) {
+                // Need rationale
+                var dialogMessage: String =
+                    "You need to grant access to " + permissionsNeeded[0]
 
-        if (listPermissionsNeeded.isNotEmpty()) {
+                for (i in 1 until permissionsNeeded.size) {
+                    dialogMessage += ", " + permissionsNeeded[i]
+                }
+                myShowPermissionDialog(dialogMessage, permissionsList)
+                return
+            }
             ActivityCompat.requestPermissions(
                 this,
-                listPermissionsNeeded.toTypedArray(),
+                permissionsList.toTypedArray(),
                 REQUEST_ID_MULTIPLE_PERMISSIONS
             )
-            return false
+            return
+        }
+        initializeView()
+    }
+
+    @RequiresApi(Build.VERSION_CODES.M)
+    private fun addPermission(permissionsList: MutableList<String>, permission: String): Boolean {
+        if (checkSelfPermission(permission) != PackageManager.PERMISSION_GRANTED) {
+            permissionsList.add(permission)
+            // Check for Rationale Option
+            if (!shouldShowRequestPermissionRationale(permission)) return false
         }
         return true
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int,
-                                            permissions: Array<out String>,
-                                            grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+        when (requestCode) {
+            REQUEST_ID_MULTIPLE_PERMISSIONS -> {
+                val perms: MutableMap<String, Int> = HashMap()
+                // Initial
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    perms[Manifest.permission.FOREGROUND_SERVICE] =
+                        PackageManager.PERMISSION_GRANTED
 
-        when(requestCode) {
-            REQUEST_ID_MULTIPLE_PERMISSIONS ->
-                if (grantResults.isNotEmpty()) {
-                    var permissionDenied = ""
-                    for (per in permissions) {
-                        if (grantResults[0] == PackageManager.PERMISSION_DENIED) {
-                            permissionDenied += per.trimIndent()
-                            permissionDenied += " - "
-                        }
-
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        perms[Manifest.permission.ACCESS_MEDIA_LOCATION] =
+                            PackageManager.PERMISSION_GRANTED
+                    } else {
+                        TODO("VERSION.SDK_INT < Q")
                     }
+                } else {
+                    TODO("VERSION.SDK_INT < P")
+                }
+                perms[Manifest.permission.READ_EXTERNAL_STORAGE] = PackageManager.PERMISSION_GRANTED
+                // Fill with results
+                var i = 0
+                while (i < permissions.size) {
+                    perms[permissions[i]] = grantResults[i]
+                    i++
+                }
+                // Check for permissions granted
+                if (perms[Manifest.permission.FOREGROUND_SERVICE] == PackageManager.PERMISSION_GRANTED &&
+                    perms[Manifest.permission.ACCESS_MEDIA_LOCATION] == PackageManager.PERMISSION_GRANTED &&
+                    perms[Manifest.permission.READ_EXTERNAL_STORAGE] == PackageManager.PERMISSION_GRANTED) {
+                    // All Permissions Granted
+                    initializeView()
+                } else {
+                    // Permission Denied
                     Toast.makeText(
                         this@MainActivity,
-                        permissionDenied,
+                        "Some permissions have been denied",
                         Toast.LENGTH_SHORT
                     ).show()
                 }
+            }
+            else -> super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         }
+    }
 
+    private fun myShowPermissionDialog(msg: String, list: MutableList<String>) {
+        // build alert dialog
+        val dialogBuilder = AlertDialog.Builder(this)
+
+        // set message of alert dialog
+        dialogBuilder.setMessage(msg)
+            // if the dialog is cancelable
+            .setCancelable(false)
+            // positive button text and action
+            .setPositiveButton("Grant Permission", DialogInterface.OnClickListener {
+                    _, _ -> ActivityCompat.requestPermissions(
+                this,
+                list.toTypedArray(),
+                REQUEST_ID_MULTIPLE_PERMISSIONS)
+            })
+        // negative button text and action
+//            .setNegativeButton("Continue", DialogInterface.OnClickListener {
+//                    dialog, id -> dialog.cancel()
+//            })
+
+        // create dialog box
+        val alert = dialogBuilder.create()
+        // set title for alert dialog box
+        alert.setTitle("Permissions Needed")
+        // show alert dialog
+        alert.show()
     }
 
     fun initializeView() {
@@ -245,7 +314,7 @@ class MainActivity : AppCompatActivity() {
         val dialogBuilder = AlertDialog.Builder(this)
 
         // set message of alert dialog
-        dialogBuilder.setMessage("Populate Music Folder with MP3 songs and try again.")
+        dialogBuilder.setMessage(errMsg)
             // if the dialog is cancelable
             .setCancelable(false)
             // positive button text and action

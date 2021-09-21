@@ -26,18 +26,10 @@ import android.view.KeyEvent
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
-import java.io.IOException
-import java.util.*
-import android.app.PendingIntent
-import android.net.Uri
-import android.provider.MediaStore
 import java.io.File
 import java.io.FileInputStream
-import android.app.NotificationManager
-
-import android.app.NotificationChannel
-import android.support.v4.media.session.PlaybackStateCompat
-import androidx.media.session.MediaButtonReceiver
+import java.io.IOException
+import java.util.*
 
 
 class MediaPlayerService : Service(), OnCompletionListener,
@@ -49,7 +41,7 @@ class MediaPlayerService : Service(), OnCompletionListener,
     private var mediaPlayer: MediaPlayer? = null
 
     //path to the audio file
-    //newcode - Dec 2020 ***** private val mediaFile: String? = null
+    //val mediaFile: String? = null
 
     //Used to pause/resume MediaPlayer
     private var resumePosition = 0
@@ -142,7 +134,6 @@ class MediaPlayerService : Service(), OnCompletionListener,
 
         // Attach Callback to receive MediaSession updates
         mediaSession!!.setCallback(object : MediaSessionCompat.Callback() {
-            //todo - get bluetooth controls working??
 //https://stackoverflow.com/questions/28798116/how-to-use-the-new-mediasession-class-to-receive-media-button-presses-on-android
             override fun onMediaButtonEvent(mediaButtonIntent: Intent): Boolean {
                 super.onMediaButtonEvent(mediaButtonIntent)
@@ -157,7 +148,6 @@ class MediaPlayerService : Service(), OnCompletionListener,
 
                     if (keyEvent.action == KeyEvent.ACTION_UP) {
                         Toast.makeText(this@MediaPlayerService, "Button Up - Media Button Event: " + keyEvent.keyCode, Toast.LENGTH_LONG).show()
-//newcode - start
                         if (keyEvent.keyCode == KeyEvent.KEYCODE_MEDIA_PLAY ) {                             //keyCode = 86
                             Log.i("MyInfo", "keyEvent KEYCODE_MEDIA_PLAY")
                             restartCurrent()
@@ -165,7 +155,6 @@ class MediaPlayerService : Service(), OnCompletionListener,
                             buildNotification(PlaybackStatus.PLAYING)
                             return true
                         } else {
-//newcode - end
                             if (keyEvent.keyCode == KeyEvent.KEYCODE_MEDIA_NEXT ||                      //Home spkr keyCode = 127: keyEvent KEYCODE_MEDIA_NEXT
                                 keyEvent.keyCode == KeyEvent.KEYCODE_MEDIA_FAST_FORWARD
                             ) {                                                                         //Car Audio keyCode = 90
@@ -419,13 +408,9 @@ class MediaPlayerService : Service(), OnCompletionListener,
             Toast.makeText(this@MediaPlayerService, "Song complete", Toast.LENGTH_SHORT).show()
             Log.i("Info", "Song completed, next song called")
 
-            //todo - playlist code
-//            playbackAction(2);    //did not play next song
             skipToNext()
             updateMetaData()
             buildNotification(PlaybackStatus.PLAYING)
-
-            //skipToNext()          // original code to just play next song
         }
     }
 
@@ -738,6 +723,7 @@ class MediaPlayerService : Service(), OnCompletionListener,
                             // Show our playback controls in the compact notification view.
                             .setShowActionsInCompactView(0, 1, 2)
                     )
+                    .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                     // Set the large and small icons
                     .setLargeIcon(largeIcon)
                     .setSmallIcon(R.drawable.ic_stat_music)
@@ -766,6 +752,7 @@ class MediaPlayerService : Service(), OnCompletionListener,
                             // Show our playback controls in the compact notification view.
                             .setShowActionsInCompactView(0, 1, 2)
                     )
+                    .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                     // Set the large and small icons
                     .setLargeIcon(largeIcon)
                     .setSmallIcon(R.drawable.ic_stat_music)
@@ -904,10 +891,8 @@ class MediaPlayerService : Service(), OnCompletionListener,
         const val ACTION_PREVIOUS = "com.jb.musicplayer.ACTION_PREVIOUS"
         const val ACTION_NEXT = "com.jb.musicplayer.ACTION_NEXT"
         const val ACTION_STOP = "com.jb.musicplayer.ACTION_STOP"
-        //newcode
         //const val ACTION_FAST_FORWARD = "com.jb.musicplayer.ACTION_FAST_FORWARD"
         //const val ACTION_REWIND = "com.jb.musicplayer.ACTION_REWIND"
-        //newcode - end
 
         //AudioPlayer notification ID
         private const val NOTIFICATION_ID = 101
