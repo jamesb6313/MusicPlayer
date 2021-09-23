@@ -12,10 +12,12 @@ import android.media.*
 import android.media.AudioManager.OnAudioFocusChangeListener
 import android.media.MediaPlayer.*
 import android.media.session.MediaSessionManager
+import android.net.Uri
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import android.os.RemoteException
+import android.provider.MediaStore
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaControllerCompat
 import android.support.v4.media.session.MediaSessionCompat
@@ -78,14 +80,14 @@ class MediaPlayerService : Service(), OnCompletionListener,
             //Invoked when the audio focus of the system is updated.
             when (focusState) {
                 AudioManager.AUDIOFOCUS_GAIN -> {
-                    Log.d("MPService", "onChangeFocus GAIN - resume playback")
+                    Log.d("MPServiceInfo", "onChangeFocus GAIN - resume playback")
                     // resume playback
                     if (mediaPlayer == null) initMediaPlayer() else if (!mediaPlayer!!.isPlaying) mediaPlayer!!.start()
                     mediaPlayer!!.setVolume(1.0f, 1.0f)
                 }
                 AudioManager.AUDIOFOCUS_LOSS -> {
                     Log.d(
-                        "MPService",
+                        "MPServiceInfo",
                         "onChangeFocus LOSS - Lost focus for an unbounded amount of time: stop playback and release media player"
                     )
                     // Lost focus for an unbounded amount of time: stop playback and release media player
@@ -97,13 +99,13 @@ class MediaPlayerService : Service(), OnCompletionListener,
                     // Lost focus for a short time, but we have to stop
                     // playback. We don't release the media player because playback
                     // is likely to resume
-                    Log.d("MPService", "onChangeFocus LOSS_TRANSIENT - resume playback")
+                    Log.d("MPServiceInfo", "onChangeFocus LOSS_TRANSIENT - resume playback")
                     if (mediaPlayer!!.isPlaying) mediaPlayer !!. pause ()
                 }
                 AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
                     // Lost focus for a short time, but it's ok to keep playing
                     // at an attenuated level
-                    Log.d("MPService", "onChangeFocus LOSS_TRANSIENT_CAN_DUCK - Lost focus for a short time, but it's ok to keep playing at an attenuated level")
+                    Log.d("MPServiceInfo", "onChangeFocus LOSS_TRANSIENT_CAN_DUCK - Lost focus for a short time, but it's ok to keep playing at an attenuated level")
                     if (mediaPlayer!!.isPlaying) mediaPlayer!!.setVolume(0.1f, 0.1f)
                 }
             }
@@ -138,7 +140,7 @@ class MediaPlayerService : Service(), OnCompletionListener,
             override fun onMediaButtonEvent(mediaButtonIntent: Intent): Boolean {
                 super.onMediaButtonEvent(mediaButtonIntent)
                 //Toast.makeText(this@MediaPlayerService, "Media Button Event", Toast.LENGTH_LONG).show()
-                //Log.i("MyInfo", "onMediaButtonEvent called: $mediaButtonIntent")
+                //Log.i("MPServiceInfo", "onMediaButtonEvent called: $mediaButtonIntent")
 
 
 //https://stackoverflow.com/questions/55030914/handle-media-button-from-service-in-android-8-0
@@ -149,7 +151,7 @@ class MediaPlayerService : Service(), OnCompletionListener,
                     if (keyEvent.action == KeyEvent.ACTION_UP) {
                         Toast.makeText(this@MediaPlayerService, "Button Up - Media Button Event: " + keyEvent.keyCode, Toast.LENGTH_LONG).show()
                         if (keyEvent.keyCode == KeyEvent.KEYCODE_MEDIA_PLAY ) {                             //keyCode = 86
-                            Log.i("MyInfo", "keyEvent KEYCODE_MEDIA_PLAY")
+                            Log.i("MPServiceInfo", "keyEvent KEYCODE_MEDIA_PLAY")
                             restartCurrent()
                             updateMetaData()
                             buildNotification(PlaybackStatus.PLAYING)
@@ -158,7 +160,7 @@ class MediaPlayerService : Service(), OnCompletionListener,
                             if (keyEvent.keyCode == KeyEvent.KEYCODE_MEDIA_NEXT ||                      //Home spkr keyCode = 127: keyEvent KEYCODE_MEDIA_NEXT
                                 keyEvent.keyCode == KeyEvent.KEYCODE_MEDIA_FAST_FORWARD
                             ) {                                                                         //Car Audio keyCode = 90
-                                Log.i("MyInfo", "keyEvent KEYCODE_MEDIA_NEXT")
+                                Log.i("MPServiceInfo", "keyEvent KEYCODE_MEDIA_NEXT")
                                 //onSkipToNext()
                                 skipToNext()
                                 updateMetaData()
@@ -168,7 +170,7 @@ class MediaPlayerService : Service(), OnCompletionListener,
                                 if (keyEvent.keyCode == KeyEvent.KEYCODE_MEDIA_PREVIOUS ||              //Home spkr keyCode = 88: keyEvent KEYCODE_MEDIA_PREVIOUS
                                     keyEvent.keyCode == KeyEvent.KEYCODE_MEDIA_REWIND
                                 ) {                                                                     //Car Audio keyCode = 89
-                                    Log.i("MyInfo", "keyEvent KEYCODE_MEDIA_PREVIOUS")
+                                    Log.i("MPServiceInfo", "keyEvent KEYCODE_MEDIA_PREVIOUS")
                                     //onSkipToPrevious()
                                     skipToPrevious()
                                     updateMetaData()
@@ -184,7 +186,7 @@ class MediaPlayerService : Service(), OnCompletionListener,
 //                if (bundle != null) {
 //                    for (key in bundle.keySet()) {
 //                        val value: Any = bundle.get(key)!!
-//                        Log.i("MyInfo", String.format("Key = %s, value.toString() = %s, value.javaClass = (%s)", key, value.toString(), value.javaClass.name)
+//                        Log.i("MPServiceInfo", String.format("Key = %s, value.toString() = %s, value.javaClass = (%s)", key, value.toString(), value.javaClass.name)
 //                        )
 //                    }
 //                }
@@ -202,7 +204,7 @@ class MediaPlayerService : Service(), OnCompletionListener,
             override fun onPause() {
                 super.onPause()
                 Toast.makeText(this@MediaPlayerService, "Media Button Event called: onPause()", Toast.LENGTH_LONG).show()
-                Log.i("MyInfo", "onMediaButtonEvent called: onPause()")
+                Log.i("MPServiceInfo", "onMediaButtonEvent called: onPause()")
                 pauseMedia()
                 buildNotification(PlaybackStatus.PAUSED)
             }
@@ -210,7 +212,7 @@ class MediaPlayerService : Service(), OnCompletionListener,
             override fun onSkipToNext() {
                 super.onSkipToNext()
                 Toast.makeText(this@MediaPlayerService, "Media Button Event called: onSkipToNext()", Toast.LENGTH_LONG).show()
-                Log.i("MyInfo", "onMediaButtonEvent called: onSkipToNext()")
+                Log.i("MPServiceInfo", "onMediaButtonEvent called: onSkipToNext()")
                 skipToNext()
                 updateMetaData()
                 buildNotification(PlaybackStatus.PLAYING)
@@ -219,7 +221,7 @@ class MediaPlayerService : Service(), OnCompletionListener,
             override fun onSkipToPrevious() {
                 super.onSkipToPrevious()
                 Toast.makeText(this@MediaPlayerService, "Media Button Event called: onSkipToPrevious()", Toast.LENGTH_LONG).show()
-                Log.i("MyInfo", "onMediaButtonEvent called: onSkipToPrevious()")
+                Log.i("MPServiceInfo", "onMediaButtonEvent called: onSkipToPrevious()")
                 skipToPrevious()
                 updateMetaData()
                 buildNotification(PlaybackStatus.PLAYING)
@@ -324,15 +326,15 @@ class MediaPlayerService : Service(), OnCompletionListener,
         //Invoked when there has been an error during an asynchronous operation.
         when (what) {
             MEDIA_ERROR_NOT_VALID_FOR_PROGRESSIVE_PLAYBACK -> Log.d(
-                "MediaPlayer Error",
+                "MPServiceInfo",
                 "MEDIA ERROR NOT VALID FOR PROGRESSIVE PLAYBACK $extra"
             )
             MEDIA_ERROR_SERVER_DIED -> Log.d(
-                "MediaPlayer Error",
+                "MPServiceInfo",
                 "MEDIA ERROR SERVER DIED $extra"
             )
             MEDIA_ERROR_UNKNOWN -> Log.d(
-                "MediaPlayer Error",
+                "MPServiceInfo",
                 "MEDIA ERROR UNKNOWN $extra"
             )
         }
@@ -370,7 +372,7 @@ class MediaPlayerService : Service(), OnCompletionListener,
         //Reset so that the MediaPlayer is not pointing to another data source
         mediaPlayer!!.reset()
 
-        Log.d("MPService","initMediaPlayer - mediaPlayer!!.reset() just called")
+        Log.d("MPServiceInfo","initMediaPlayer - mediaPlayer!!.reset() just called")
         mediaPlayer!!.setAudioAttributes(
             AudioAttributes.Builder()
                 .setFlags(AudioAttributes.FLAG_AUDIBILITY_ENFORCED)
@@ -380,33 +382,35 @@ class MediaPlayerService : Service(), OnCompletionListener,
                 .build()
         )
 
-
         try {
-            // Set the data source to the mediaFile location
-            //mediaPlayer.setDataSource(mediaFile);
-            //var uri: Uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
-            //mediaPlayer!!.setDataSource(this, Uri.parse(activeAudio?.data))
+            //mediaPlayer!!.setDataSource(activeAudio?.data) //- this works
 
-            //mediaPlayer!!.setDataSource(activeAudio?.data)
+            /* Add to manifest - android:requestLegacyExternalStorage="true"
+            This attribute is "false" by default on apps targeting Android Q. (Android 10 API 29)
+            */
 
+            // This works for Android 9 (API 28) & my Phone Android 11
+            // with above in manifest now works for Android 10 (API 29)
             val filePath = activeAudio?.data
             val file = File(filePath!!)
             val inputStream = FileInputStream(file)
             mediaPlayer!!.setDataSource(inputStream.fd)
             inputStream.close()
+            // This works for Android 9 (API 28) & my Phone Android 11
 
+            mediaPlayer!!.prepareAsync()  // causes fatal error in emulator (move inside try stmt works here)
         } catch (e: IOException) {
-            Log.e("Info", "Error in setDataSource - error message = " + e.message)
+            Log.e("MPServiceInfo", "Error in setDataSource - error message = " + e.message)
             e.printStackTrace()
-
+            Log.e("MPServiceInfo", "End of stacktrace - NEED TO STOP SERVICE")
             stopSelf()
         }
-        mediaPlayer!!.prepareAsync()
+        //mediaPlayer!!.prepareAsync()  // causes fatal error in emulator (move inside try stmt)
 
         //Added to allow next song to play after last song finishes
         mediaPlayer!!.setOnCompletionListener {
             Toast.makeText(this@MediaPlayerService, "Song complete", Toast.LENGTH_SHORT).show()
-            Log.i("Info", "Song completed, next song called")
+            Log.i("MPServiceInfo", "Song completed, next song called")
 
             skipToNext()
             updateMetaData()
@@ -444,7 +448,7 @@ class MediaPlayerService : Service(), OnCompletionListener,
     //used in onDestroy
     @RequiresApi(Build.VERSION_CODES.O)
     private fun removeAudioFocus(): Boolean {
-        Log.d("MPService","abandonAudioFocusRequest")
+        Log.d("MPServiceInfo","abandonAudioFocusRequest")
         return AudioManager.AUDIOFOCUS_REQUEST_GRANTED ==
                 mAudioManager!!.abandonAudioFocusRequest(mFocusRequest!!)
     }
@@ -484,11 +488,11 @@ class MediaPlayerService : Service(), OnCompletionListener,
         val focusRequest  = mAudioManager!!.requestAudioFocus(mFocusRequest!!)
         when (focusRequest) {
             AudioManager.AUDIOFOCUS_REQUEST_FAILED -> {
-                Log.d("MPService","//Could not gain focus - don't start playing")
+                Log.d("MPServiceInfo","//Could not gain focus - don't start playing")
                 stopSelf()
             }
             AudioManager.AUDIOFOCUS_REQUEST_GRANTED -> {
-                Log.d("MPService","//Continue - start playing")
+                Log.d("MPServiceInfo","//Continue - start playing")
             }
         }
 //        if (requestAudioFocus() == false) {
@@ -515,7 +519,7 @@ class MediaPlayerService : Service(), OnCompletionListener,
     override fun onDestroy() {
         super.onDestroy()
 
-        Log.d("MPService","onDestroy MediaPlayerService")
+        Log.d("MPServiceInfo","onDestroy MediaPlayerService")
         if (mediaPlayer != null) {
             stopMedia()
             //mediaPlayer!!.reset()
@@ -534,6 +538,7 @@ class MediaPlayerService : Service(), OnCompletionListener,
 
         //clear cached playlist
         StorageUtil(applicationContext).clearCachedAudioPlaylist()
+
     }
 
     //Becoming noisy
@@ -564,7 +569,7 @@ class MediaPlayerService : Service(), OnCompletionListener,
             val message = "Broadcast Intent Detected " + (intent.action ?: "default null action")
 
             Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-            Log.i("Testing info", message)
+            Log.i("MPServiceInfo", message)
 
             //Get the new media index from SharedPreferences
             audioIndex = StorageUtil(applicationContext).loadAudioIndex()
@@ -606,16 +611,16 @@ class MediaPlayerService : Service(), OnCompletionListener,
 
 
         if (Build.VERSION.SDK_INT >= 26) {
-            val CHANNEL_ID = "my_channel_01"
+            val notificationChannelID = "my_channel_01"
             val channel = NotificationChannel(
-                CHANNEL_ID,
+                notificationChannelID,
                 "MusicPlayer stop music and app",
                 NotificationManager.IMPORTANCE_LOW      // API = 26 this channel contains no sound
             )
             (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(
                 channel
             )
-            val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+            val notification = NotificationCompat.Builder(this, notificationChannelID)
 
 /*                .setStyle(
                     androidx.media.app.NotificationCompat.MediaStyle()

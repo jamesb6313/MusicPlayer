@@ -1,6 +1,7 @@
 package com.jb.musicplayer
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.*
 import android.content.*
 import android.content.pm.PackageManager
@@ -63,7 +64,8 @@ class MainActivity : AppCompatActivity() {
                 if (!addPermission(permissionsList, Manifest.permission.ACCESS_MEDIA_LOCATION))
                     permissionsNeeded.add("Media Access")
             } else {
-                TODO("VERSION.SDK_INT < Q")
+                //TODO("VERSION.SDK_INT < Q")
+                Log.i("MainActivityInfo", "no permission for ACCESS_MEDIA_LOCATION")
             }
 
         } else {
@@ -105,6 +107,7 @@ class MainActivity : AppCompatActivity() {
         return true
     }
 
+    @SuppressLint("InlinedApi")
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<String>,
@@ -122,7 +125,10 @@ class MainActivity : AppCompatActivity() {
                         perms[Manifest.permission.ACCESS_MEDIA_LOCATION] =
                             PackageManager.PERMISSION_GRANTED
                     } else {
-                        TODO("VERSION.SDK_INT < Q")
+                        //TODO("VERSION.SDK_INT < Q")
+                        perms[Manifest.permission.ACCESS_MEDIA_LOCATION] =
+                            PackageManager.PERMISSION_GRANTED
+                        Log.i("MainActivityInfo", "no permission for ACCESS_MEDIA_LOCATION just grant it")
                     }
                 } else {
                     TODO("VERSION.SDK_INT < P")
@@ -196,7 +202,7 @@ class MainActivity : AppCompatActivity() {
                 //mAdapter.getItem(position)
 
                 //Toast.makeText(this@MainActivity,"Play songs", Toast.LENGTH_LONG).show()
-                Log.i("Testing info", "SetUpAdapter() - current position is $position")
+                Log.i("MainActivityInfo", "SetUpAdapter() - current position is $position")
                 playAudio(position)
             }
         })
@@ -274,7 +280,7 @@ class MainActivity : AppCompatActivity() {
             if (!serviceBound) {
 
                 initialSongIndex = audioIndex
-                Log.i("1 Song start index", "initialSongIndex = $initialSongIndex")
+                Log.i("MainActivityInfo", "initialSongIndex = $initialSongIndex")
                 //end
 
                 //Store Serializable audioList to SharedPreferences
@@ -288,7 +294,7 @@ class MainActivity : AppCompatActivity() {
                 //startService(playerIntent)
                 bindService(playerIntent, serviceConnection, Context.BIND_AUTO_CREATE)
             } else {
-                Log.i("2 Song start index", "initialSongIndex = $initialSongIndex")
+                Log.i("MainActivityInfo", "initialSongIndex = $initialSongIndex")
 
                 //Store the new audioIndex to SharedPreferences
                 val storage = StorageUtil(applicationContext)
@@ -302,7 +308,7 @@ class MainActivity : AppCompatActivity() {
             }
         } catch (e: NullPointerException)
         {
-            Log.e("Testing Error", "Main Activity PlayAudio Error = NullPointerException")
+            Log.e("MainActivityInfo", "Main Activity PlayAudio Error = NullPointerException")
             myShowErrorDlg("Error = " + e.message)
         }
 
@@ -432,10 +438,10 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
         if (serviceBound) {
             Toast.makeText(this@MainActivity, "onDestroy() - Service is still bound", Toast.LENGTH_SHORT).show()
-            Log.i("Testing info","onDestroy() - Service is still bound")
+            Log.i("MainActivityInfo","onDestroy() - Service is still bound")
         } else {
             Toast.makeText(this@MainActivity, "onDestroy() - Service not bound", Toast.LENGTH_SHORT).show()
-            Log.i("Testing info","onDestroy() - Service not bound")
+            Log.i("MainActivityInfo","onDestroy() - Service not bound")
         }
 
 

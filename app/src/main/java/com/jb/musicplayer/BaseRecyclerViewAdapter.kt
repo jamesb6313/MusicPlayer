@@ -3,7 +3,6 @@ package com.jb.musicplayer
 
 import android.os.Handler
 import android.os.Looper
-import android.widget.AdapterView
 import androidx.recyclerview.widget.RecyclerView
 
 abstract class BaseRecyclerViewAdapter<T>:  RecyclerView.Adapter<RecyclerView.ViewHolder>() {

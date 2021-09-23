@@ -49,7 +49,7 @@ class StorageUtil(private val context: Context?) {
         mPreferences = context?.getSharedPreferences(STORAGE, Context.MODE_PRIVATE)
         val editor = mPreferences!!.edit()
         editor.clear()
-        editor.commit()
+        editor.apply()
     }
 
 }
