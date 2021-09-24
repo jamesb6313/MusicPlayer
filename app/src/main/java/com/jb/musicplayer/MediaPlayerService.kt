@@ -12,12 +12,10 @@ import android.media.*
 import android.media.AudioManager.OnAudioFocusChangeListener
 import android.media.MediaPlayer.*
 import android.media.session.MediaSessionManager
-import android.net.Uri
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import android.os.RemoteException
-import android.provider.MediaStore
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaControllerCompat
 import android.support.v4.media.session.MediaSessionCompat
@@ -123,12 +121,10 @@ class MediaPlayerService : Service(), OnCompletionListener,
         transportControls = mediaSession!!.controller.transportControls
         //set MediaSession -> ready to receive media commands
         mediaSession!!.isActive = true
+
         //indicate that the MediaSession handles transport control commands
         // through its MediaSessionCompat.Callback.
-
-        //get bluetooth controls working??
         //https://developer.android.com/guide/topics/media-apps/video-app/building-a-video-player-activity
-        //mediaSession!!.setFlags(MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS)
         mediaSession!!.setFlags(MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS or MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS)
 
         //Set mediaSession's MetaData
@@ -610,13 +606,20 @@ class MediaPlayerService : Service(), OnCompletionListener,
         )
 
 
-        if (Build.VERSION.SDK_INT >= 26) {
-            val notificationChannelID = "my_channel_01"
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val notificationChannelID = "player_channel_01"
             val channel = NotificationChannel(
                 notificationChannelID,
-                "MusicPlayer stop music and app",
+                "Stop MusicPlayer Service Channel",
                 NotificationManager.IMPORTANCE_LOW      // API = 26 this channel contains no sound
             )
+            // Configure the notification channel.
+            channel.description = "Song Notification Channel"
+            channel.enableLights(true)
+            channel.lightColor = Color.RED
+            //notificationChannel.vibrationPattern = longArrayOf(0, 1000, 500, 1000)
+            channel.enableVibration(false)
+
             (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(
                 channel
             )
@@ -638,22 +641,40 @@ class MediaPlayerService : Service(), OnCompletionListener,
                         PlaybackStateCompat.ACTION_STOP
                         )
                 )*/
-                // Add a pause button
+                // Add a stop button
                 .addAction(
                     android.R.drawable.ic_menu_close_clear_cancel,
-                    "Exit App & Service", pendingCloseIntent)
+                    "Stop MusicPlayer Service", pendingCloseIntent)
 
-                .setSmallIcon(R.drawable.ic_stat_music)
+                .setSmallIcon(android.R.drawable.ic_menu_close_clear_cancel)
                 .setCategory(NotificationCompat.CATEGORY_SERVICE)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                .setContentTitle("Music Player App")
+                .setContentTitle("Stop Music Player")
                 .setShowWhen(true)
                 .setWhen(System.currentTimeMillis())
-                .setContentText("Songs currently playing")
+                .setContentText("MusicPlayer Service must be stopped")
+                .setOngoing(true)
+                .build()
+            startForeground(PLAYER_NOTIFICATION_ID, notification)
+        } else {
+            val notification = NotificationCompat.Builder(this)
+                // Add a stop button
+                .addAction(
+                    android.R.drawable.ic_menu_close_clear_cancel,
+                    "Stop MusicPlayer Service", pendingCloseIntent)
+
+                .setSmallIcon(android.R.drawable.ic_menu_close_clear_cancel)
+                .setCategory(NotificationCompat.CATEGORY_SERVICE)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setContentTitle("Stop Music Player")
+                .setShowWhen(true)
+                .setWhen(System.currentTimeMillis())
+                .setContentText("MusicPlayer Service must be stopped")
                 .setOngoing(true)
                 .build()
             startForeground(PLAYER_NOTIFICATION_ID, notification)
         }
+
 
         // Perform one-time setup procedures
 
@@ -696,7 +717,7 @@ class MediaPlayerService : Service(), OnCompletionListener,
 
 //https://stackoverflow.com/questions/45462666/notificationcompat-builder-deprecated-in-android-o
 //8 - Simple Sample
-        val channelId = "my_channel_id_01"
+        val channelId = "song_channel_01"
         val notificationManager =
             this.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         lateinit var notificationCompatBuilder: NotificationCompat.Builder
@@ -705,12 +726,12 @@ class MediaPlayerService : Service(), OnCompletionListener,
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val notificationChannel = NotificationChannel(
                 channelId,
-                "My Notifications",
+                "Song Notification Channel",
                 NotificationManager.IMPORTANCE_LOW
             )
 
             // Configure the notification channel.
-            notificationChannel.description = "Channel description"
+            notificationChannel.description = "Song Notification Channel"
             notificationChannel.enableLights(true)
             notificationChannel.lightColor = Color.GREEN
             //notificationChannel.vibrationPattern = longArrayOf(0, 1000, 500, 1000)
