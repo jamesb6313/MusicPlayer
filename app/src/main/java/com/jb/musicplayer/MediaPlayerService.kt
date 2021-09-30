@@ -30,6 +30,8 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
 import java.util.*
+import android.app.PendingIntent
+import java.lang.Exception
 
 
 class MediaPlayerService : Service(), OnCompletionListener,
@@ -132,6 +134,7 @@ class MediaPlayerService : Service(), OnCompletionListener,
 
         // Attach Callback to receive MediaSession updates
         mediaSession!!.setCallback(object : MediaSessionCompat.Callback() {
+
 //https://stackoverflow.com/questions/28798116/how-to-use-the-new-mediasession-class-to-receive-media-button-presses-on-android
             override fun onMediaButtonEvent(mediaButtonIntent: Intent): Boolean {
                 super.onMediaButtonEvent(mediaButtonIntent)
@@ -226,6 +229,8 @@ class MediaPlayerService : Service(), OnCompletionListener,
             override fun onStop() {
                 super.onStop()
                 removeNotification()
+
+                Log.i("MPServiceInfo", "initMediaSession() MediaSession.onStop - stop service")
                 //Stop the service
                 stopSelf()
             }
@@ -444,7 +449,7 @@ class MediaPlayerService : Service(), OnCompletionListener,
     //used in onDestroy
     @RequiresApi(Build.VERSION_CODES.O)
     private fun removeAudioFocus(): Boolean {
-        Log.d("MPServiceInfo","abandonAudioFocusRequest")
+        Log.d("MPServiceInfo","removeAudioFocus() - abandonAudioFocusRequest")
         return AudioManager.AUDIOFOCUS_REQUEST_GRANTED ==
                 mAudioManager!!.abandonAudioFocusRequest(mFocusRequest!!)
     }
@@ -484,11 +489,11 @@ class MediaPlayerService : Service(), OnCompletionListener,
         val focusRequest  = mAudioManager!!.requestAudioFocus(mFocusRequest!!)
         when (focusRequest) {
             AudioManager.AUDIOFOCUS_REQUEST_FAILED -> {
-                Log.d("MPServiceInfo","//Could not gain focus - don't start playing")
+                Log.d("MPServiceInfo","Could not gain focus - AUDIOFOCUS_REQUEST_FAILED")
                 stopSelf()
             }
             AudioManager.AUDIOFOCUS_REQUEST_GRANTED -> {
-                Log.d("MPServiceInfo","//Continue - start playing")
+                Log.d("MPServiceInfo","Continue - AUDIOFOCUS_REQUEST_GRANTED")
             }
         }
 //        if (requestAudioFocus() == false) {
@@ -515,10 +520,16 @@ class MediaPlayerService : Service(), OnCompletionListener,
     override fun onDestroy() {
         super.onDestroy()
 
-        Log.d("MPServiceInfo","onDestroy MediaPlayerService")
+        Log.i("MPServiceInfo","onDestroy() - MediaPlayerService")
         if (mediaPlayer != null) {
             stopMedia()
-            //mediaPlayer!!.reset()
+            try {
+                mediaPlayer!!.reset()
+            } catch (e: Exception) {
+                Log.i("MPPlayerServiceInfo","mediaPlayer.reset - START TRACE")
+                e.printStackTrace()
+                Log.i("MPPlayerServiceInfo","mediaPlayer.reset - END TRACE")
+            }
             mediaPlayer!!.release()
         }
         removeAudioFocus()
@@ -532,9 +543,11 @@ class MediaPlayerService : Service(), OnCompletionListener,
         unregisterReceiver(becomingNoisyReceiver)
         unregisterReceiver(playNewAudio)
 
+//        Log.i("MPServiceInfo","onDestroy() - this.stopSelf() called")
+//        this.stopSelf()
+
         //clear cached playlist
         StorageUtil(applicationContext).clearCachedAudioPlaylist()
-
     }
 
     //Becoming noisy
@@ -624,23 +637,6 @@ class MediaPlayerService : Service(), OnCompletionListener,
                 channel
             )
             val notification = NotificationCompat.Builder(this, notificationChannelID)
-
-/*                .setStyle(
-                    androidx.media.app.NotificationCompat.MediaStyle()
-                        .setShowActionsInCompactView(0)
-                        .setShowCancelButton(true)
-                        .setCancelButtonIntent(
-                            MediaButtonReceiver.buildMediaButtonPendingIntent(
-                            this,
-                            PlaybackStateCompat.ACTION_STOP
-                            ))
-                )
-                .setDeleteIntent(
-                    MediaButtonReceiver.buildMediaButtonPendingIntent(
-                        this,
-                        PlaybackStateCompat.ACTION_STOP
-                        )
-                )*/
                 // Add a stop button
                 .addAction(
                     android.R.drawable.ic_menu_close_clear_cancel,
@@ -715,6 +711,14 @@ class MediaPlayerService : Service(), OnCompletionListener,
             R.drawable.image5
         ) //replace with your own image
 
+        val pendingDismissedIntent = PendingIntent.getActivity(
+            this, 0,
+            Intent(this, MainActivity::class.java)
+                .setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                .setAction(CLOSE_ACTION),
+            0
+        )
+
 //https://stackoverflow.com/questions/45462666/notificationcompat-builder-deprecated-in-android-o
 //8 - Simple Sample
         val channelId = "song_channel_01"
@@ -766,6 +770,8 @@ class MediaPlayerService : Service(), OnCompletionListener,
                         "next",
                         playbackAction(2)
                     )
+                    //.setDeleteIntent(dismissPendingIntent)
+                    .setDeleteIntent(pendingDismissedIntent)
         } else {
             // Create a new Notification
             notificationCompatBuilder =
@@ -795,6 +801,8 @@ class MediaPlayerService : Service(), OnCompletionListener,
                         "next",
                         playbackAction(2)
                     )
+                    //.setDeleteIntent(dismissPendingIntent)
+                    .setDeleteIntent(pendingDismissedIntent)
         }
 
         (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).notify(
@@ -910,6 +918,15 @@ class MediaPlayerService : Service(), OnCompletionListener,
             PhoneStateListener.LISTEN_CALL_STATE
         )
     } //
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+
+        Log.i("MPServiceInfo", "Service stopped with onTaskRemoved()")
+        Toast.makeText(this@MediaPlayerService, "MediaPlayer Service Stopped", Toast.LENGTH_LONG).show()
+        //stop service
+        this.stopSelf()
+        super.onTaskRemoved(rootIntent)
+    }
 
     companion object {
         const val ACTION_PLAY = "com.jb.musicplayer.ACTION_PLAY"

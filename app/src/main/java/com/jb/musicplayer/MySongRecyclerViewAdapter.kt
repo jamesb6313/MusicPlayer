@@ -46,7 +46,7 @@ class MySongRecyclerViewAdapter : BaseRecyclerViewAdapter<AudioSongs>(){
         // implementation 'androidx.recyclerview:recyclerview:1.2.1'
         override fun onClick(v: View?) {
             itemClickListener.onItemClick(absoluteAdapterPosition, v)
-            Log.i("MainActivityInfo", "onClick() - current position is $absoluteAdapterPosition")
+            Log.i("RecyclerInfo", "onClick() - current position is $absoluteAdapterPosition")
         }
     }
 }

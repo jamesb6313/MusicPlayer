@@ -25,7 +25,6 @@ import androidx.recyclerview.widget.RecyclerView
 import com.jb.musicplayer.databinding.ActivityMainBinding
 import java.util.*
 
-
 class MainActivity : AppCompatActivity() {
     var audioList: ArrayList<AudioSongs>? = null
     private lateinit var layout: View
@@ -36,7 +35,6 @@ class MainActivity : AppCompatActivity() {
     var serviceBound = false
 
     private var player: MediaPlayerService? = null
-    var initialSongIndex = 0
     val Broadcast_PLAY_NEW_AUDIO = "com.jb.musicplayer.PlayNewAudio"
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -153,6 +151,7 @@ class MainActivity : AppCompatActivity() {
                         "Some permissions have been denied",
                         Toast.LENGTH_SHORT
                     ).show()
+                    Log.i("MainActivityInfo", "Some permissions have been denied")
                 }
             }
             else -> super.onRequestPermissionsResult(requestCode, permissions, grantResults)
@@ -278,24 +277,18 @@ class MainActivity : AppCompatActivity() {
         try {
             //Check is service is active
             if (!serviceBound) {
-
-                initialSongIndex = audioIndex
-                Log.i("MainActivityInfo", "initialSongIndex = $initialSongIndex")
-                //end
-
                 //Store Serializable audioList to SharedPreferences
                 val storage = StorageUtil(applicationContext)
                 storage.storeAudio(audioList)
                 storage.storeAudioIndex(audioIndex)
+
                 val playerIntent = Intent(this, MediaPlayerService::class.java)
-                //playerIntent.putExtra("StartIndex", initialSongIndex)
+                //playerIntent.putExtra("StartIndex", audioIndex)
 
                 ContextCompat.startForegroundService(this, playerIntent)
                 //startService(playerIntent)
                 bindService(playerIntent, serviceConnection, Context.BIND_AUTO_CREATE)
             } else {
-                Log.i("MainActivityInfo", "initialSongIndex = $initialSongIndex")
-
                 //Store the new audioIndex to SharedPreferences
                 val storage = StorageUtil(applicationContext)
                 storage.storeAudioIndex(audioIndex)
@@ -311,8 +304,7 @@ class MainActivity : AppCompatActivity() {
             Log.e("MainActivityInfo", "Main Activity PlayAudio Error = NullPointerException")
             myShowErrorDlg("Error = " + e.message)
         }
-
-        this.title = "Playing song " + (audioIndex + 1) + " of " + audioList?.size
+        //this.title = "Playing song " + (audioIndex + 1) + " of " + audioList?.size
     }
 
     private fun myShowErrorDlg(errMsg: String) {
@@ -349,6 +341,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun exit() {
+        Toast.makeText(this@MainActivity, "exit() - called from Mplayer Notification ", Toast.LENGTH_SHORT).show()
+        Log.i("MainActivityInfo", "exit() - called from Mplayer Notification ")
         if (serviceBound) {
             unbindService(serviceConnection)
             serviceBound = false
@@ -356,6 +350,7 @@ class MainActivity : AppCompatActivity() {
             //service is active
             player!!.stopSelf()
             Toast.makeText(this@MainActivity, "exit() - Service not bound", Toast.LENGTH_SHORT).show()
+            Log.i("MainActivityInfo", "exit() - Service not bound")
         }
 
         stopService(Intent(this, MediaPlayerService::class.java))
@@ -417,6 +412,7 @@ class MainActivity : AppCompatActivity() {
             player = binder.service
             serviceBound = true
             Toast.makeText(this@MainActivity, "Service Bound", Toast.LENGTH_SHORT).show()
+            Log.i("MainActivityInfo", "Service Bound")
         }
 
         override fun onServiceDisconnected(name: ComponentName) {

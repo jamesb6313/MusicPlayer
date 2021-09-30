@@ -20,11 +20,13 @@
         android:theme="@style/Theme.MusicPlayer"
         android:requestLegacyExternalStorage="true">
         <activity
-            android:name=".SettingsActivity"
-            android:exported="true" />
+            android:name=".SettingsActivity" />
 
-
-        <service android:name=".MediaPlayerService" />
+        <service
+            android:enabled="true"
+            android:name=".MediaPlayerService"
+            android:exported="false"
+            android:stopWithTask="true"/>
 
         <activity
             android:name=".MainActivity"
