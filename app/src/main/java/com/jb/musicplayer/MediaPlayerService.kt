@@ -1,6 +1,7 @@
 package com.jb.musicplayer
 
 
+import android.annotation.SuppressLint
 import android.app.*
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -600,13 +601,11 @@ class MediaPlayerService : Service(), OnCompletionListener,
     }
 
     private fun registerPlayNewAudio() {
-        //Register playNewMedia receiver
-        //val filter = IntentFilter(MainActivity.Broadcast_PLAY_NEW_AUDIO)
-        //todo - get rid of hard code
-        val filter = IntentFilter("com.jb.musicplayer.PlayNewAudio")
+        val filter = IntentFilter(Broadcast_PLAY_NEW_AUDIO)
         registerReceiver(playNewAudio, filter)
     }
 
+    @SuppressLint("UnspecifiedImmutableFlag")
     override fun onCreate() {
         super.onCreate()
 
@@ -684,6 +683,7 @@ class MediaPlayerService : Service(), OnCompletionListener,
         registerPlayNewAudio()
     }
 
+    @SuppressLint("UnspecifiedImmutableFlag")
     private fun buildNotification(playbackStatus: PlaybackStatus) {
         /**
          * Notification actions -> playbackAction()
@@ -818,6 +818,7 @@ class MediaPlayerService : Service(), OnCompletionListener,
         notificationManager.cancel(NOTIFICATION_ID)
     }
 
+    @SuppressLint("UnspecifiedImmutableFlag")
     private fun playbackAction(actionNumber: Int): PendingIntent? {
         val playbackAction = Intent(this, MediaPlayerService::class.java)
         when (actionNumber) {
@@ -942,5 +943,7 @@ class MediaPlayerService : Service(), OnCompletionListener,
 
         const val PLAYER_NOTIFICATION_ID = 102
         const val CLOSE_ACTION: String = "close"
+
+        const val Broadcast_PLAY_NEW_AUDIO = "com.jb.musicplayer.PlayNewAudio"
     }
 }

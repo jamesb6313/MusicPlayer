@@ -35,7 +35,7 @@ class MainActivity : AppCompatActivity() {
     var serviceBound = false
 
     private var player: MediaPlayerService? = null
-    val Broadcast_PLAY_NEW_AUDIO = "com.jb.musicplayer.PlayNewAudio"
+    //val Broadcast_PLAY_NEW_AUDIO = "com.jb.musicplayer.PlayNewAudio"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -295,7 +295,7 @@ class MainActivity : AppCompatActivity() {
 
                 //Service is active
                 //Send a broadcast to the service -> PLAY_NEW_AUDIO
-                val broadcastIntent = Intent(Broadcast_PLAY_NEW_AUDIO)
+                val broadcastIntent = Intent(MediaPlayerService.Broadcast_PLAY_NEW_AUDIO)
 
                 sendBroadcast(broadcastIntent)
             }
