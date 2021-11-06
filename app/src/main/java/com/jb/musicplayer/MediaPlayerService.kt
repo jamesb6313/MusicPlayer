@@ -609,6 +609,21 @@ class MediaPlayerService : Service(), OnCompletionListener,
     override fun onCreate() {
         super.onCreate()
 
+        // Perform one-time setup procedures
+        buildServiceNotification()
+
+        // Manage incoming phone calls during playback.
+        // Pause MediaPlayer on incoming call,
+        // Resume on hangup.
+        callStateListener()
+        //ACTION_AUDIO_BECOMING_NOISY -- change in audio outputs -- BroadcastReceiver
+        registerBecomingNoisyReceiver()
+        //Listen for new Audio to play -- BroadcastReceiver
+        registerPlayNewAudio()
+    }
+
+    @SuppressLint("UnspecifiedImmutableFlag")
+    private fun buildServiceNotification() {
         val pendingCloseIntent = PendingIntent.getActivity(
             this, 0,
             Intent(this, MainActivity::class.java)
@@ -616,7 +631,6 @@ class MediaPlayerService : Service(), OnCompletionListener,
                 .setAction(CLOSE_ACTION),
             0
         )
-
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val notificationChannelID = "player_channel_01"
@@ -669,18 +683,6 @@ class MediaPlayerService : Service(), OnCompletionListener,
                 .build()
             startForeground(PLAYER_NOTIFICATION_ID, notification)
         }
-
-
-        // Perform one-time setup procedures
-
-        // Manage incoming phone calls during playback.
-        // Pause MediaPlayer on incoming call,
-        // Resume on hangup.
-        callStateListener()
-        //ACTION_AUDIO_BECOMING_NOISY -- change in audio outputs -- BroadcastReceiver
-        registerBecomingNoisyReceiver()
-        //Listen for new Audio to play -- BroadcastReceiver
-        registerPlayNewAudio()
     }
 
     @SuppressLint("UnspecifiedImmutableFlag")
@@ -945,5 +947,6 @@ class MediaPlayerService : Service(), OnCompletionListener,
         const val CLOSE_ACTION: String = "close"
 
         const val Broadcast_PLAY_NEW_AUDIO = "com.jb.musicplayer.PlayNewAudio"
+        const val REQUEST_ID_MULTIPLE_PERMISSIONS = 42
     }
 }

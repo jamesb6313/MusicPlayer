@@ -22,6 +22,8 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.jb.musicplayer.MediaPlayerService.Companion.Broadcast_PLAY_NEW_AUDIO
+import com.jb.musicplayer.MediaPlayerService.Companion.REQUEST_ID_MULTIPLE_PERMISSIONS
 import com.jb.musicplayer.databinding.ActivityMainBinding
 import java.util.*
 
@@ -30,7 +32,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var layout: View
     private lateinit var binding: ActivityMainBinding
     lateinit var mAdapter: MySongRecyclerViewAdapter
-    private val REQUEST_ID_MULTIPLE_PERMISSIONS = 42
+    //private val REQUEST_ID_MULTIPLE_PERMISSIONS = 42
 
     var serviceBound = false
 
@@ -64,10 +66,12 @@ class MainActivity : AppCompatActivity() {
             } else {
                 //TODO("VERSION.SDK_INT < Q")
                 Log.i("MainActivityInfo", "no permission for ACCESS_MEDIA_LOCATION")
+                myShowErrorDlg("VERSION.SDK_INT < Q")
             }
 
         } else {
-            TODO("VERSION.SDK_INT < P")
+            //TODO("VERSION.SDK_INT < P")
+            myShowErrorDlg("VERSION.SDK_INT < Q")
         }
 
         if (!addPermission(permissionsList, Manifest.permission.READ_EXTERNAL_STORAGE))
@@ -127,9 +131,11 @@ class MainActivity : AppCompatActivity() {
                         perms[Manifest.permission.ACCESS_MEDIA_LOCATION] =
                             PackageManager.PERMISSION_GRANTED
                         Log.i("MainActivityInfo", "no permission for ACCESS_MEDIA_LOCATION just grant it")
+                        myShowErrorDlg("VERSION.SDK_INT < Q")
                     }
                 } else {
-                    TODO("VERSION.SDK_INT < P")
+                    //TODO("VERSION.SDK_INT < P")
+                    myShowErrorDlg("VERSION.SDK_INT < P")
                 }
                 perms[Manifest.permission.READ_EXTERNAL_STORAGE] = PackageManager.PERMISSION_GRANTED
                 // Fill with results
@@ -167,15 +173,19 @@ class MainActivity : AppCompatActivity() {
             // if the dialog is cancelable
             .setCancelable(false)
             // positive button text and action
-            .setPositiveButton("Grant Permission", DialogInterface.OnClickListener {
-                    _, _ -> ActivityCompat.requestPermissions(
-                this,
-                list.toTypedArray(),
-                REQUEST_ID_MULTIPLE_PERMISSIONS)
-            })
-        // negative button text and action
-//            .setNegativeButton("Continue", DialogInterface.OnClickListener {
-//                    dialog, id -> dialog.cancel()
+            .setPositiveButton("Grant Permission") { _, _ ->
+                ActivityCompat.requestPermissions(
+                    this,
+                    list.toTypedArray(),
+                    REQUEST_ID_MULTIPLE_PERMISSIONS
+                )
+            }
+
+//            .setPositiveButton("Grant Permission", DialogInterface.OnClickListener {
+//                    _, _ -> ActivityCompat.requestPermissions(
+//                this,
+//                list.toTypedArray(),
+//                REQUEST_ID_MULTIPLE_PERMISSIONS)
 //            })
 
         // create dialog box
@@ -186,7 +196,7 @@ class MainActivity : AppCompatActivity() {
         alert.show()
     }
 
-    fun initializeView() {
+    private fun initializeView() {
         loadAudio()
         setUpAdapter()
         initRecyclerView()
@@ -209,7 +219,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun initRecyclerView() {
         val recyclerView: RecyclerView = findViewById<View>(R.id.recyclerview) as RecyclerView
-        //recyclerView = rootView.findViewById(R.id.recyclerview)
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.addItemDecoration(DividerItemDecoration(this@MainActivity, LinearLayoutManager.VERTICAL))
         recyclerView.adapter = mAdapter
@@ -295,7 +304,7 @@ class MainActivity : AppCompatActivity() {
 
                 //Service is active
                 //Send a broadcast to the service -> PLAY_NEW_AUDIO
-                val broadcastIntent = Intent(MediaPlayerService.Broadcast_PLAY_NEW_AUDIO)
+                val broadcastIntent = Intent(Broadcast_PLAY_NEW_AUDIO)
 
                 sendBroadcast(broadcastIntent)
             }
@@ -304,7 +313,6 @@ class MainActivity : AppCompatActivity() {
             Log.e("MainActivityInfo", "Main Activity PlayAudio Error = NullPointerException")
             myShowErrorDlg("Error = " + e.message)
         }
-        //this.title = "Playing song " + (audioIndex + 1) + " of " + audioList?.size
     }
 
     private fun myShowErrorDlg(errMsg: String) {
@@ -316,9 +324,13 @@ class MainActivity : AppCompatActivity() {
             // if the dialog is cancelable
             .setCancelable(false)
             // positive button text and action
-            .setPositiveButton("Close App", DialogInterface.OnClickListener {
-                    _, _ -> finish()
-            })
+            .setPositiveButton("Close App") { dialog, _ ->
+                dialog.cancel()
+                finish()
+            }
+//            .setPositiveButton("Close App", DialogInterface.OnClickListener {
+//                    _, _ -> finish()
+//            })
         // negative button text and action
 //            .setNegativeButton("Continue", DialogInterface.OnClickListener {
 //                    dialog, id -> dialog.cancel()
@@ -379,7 +391,7 @@ class MainActivity : AppCompatActivity() {
 
             if (audioList != null && audioList!!.size > 1) {
 
-                //todo - stop service before changing list order
+                //stop service before changing list order
                 if (serviceBound) {
                     unbindService(serviceConnection)
                     serviceBound = false
